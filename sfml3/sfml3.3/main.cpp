@@ -18,13 +18,31 @@ sf::Vector2f toEuclidean(sf::Vector2f radius, float angle)
         float(radius.y * sin(angle))};
 }
 
-void updateEyesElements(Eye &eye1, Eye &eye2)
+bool isInside(const sf::Vector2f &position, const sf::Vector2f &radius)
+{
+    const float coordinateX = (std::pow(position.x, 2) / std::pow(radius.x, 2));
+    const float coordinateY = (std::pow(position.y, 2) / std::pow(radius.y, 2));
+    const float ellipseEquation = coordinateX + coordinateY;
+    if (ellipseEquation < 1.f)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+void updateEyeOneElements(Eye &eye1)
 {
     const sf::Vector2f motionRadius = {45.f, 85.f};
-
     const sf::Vector2f bigEllipseOneOffset = toEuclidean(motionRadius, eye1.rotation);
     eye1.littleEllipse.setPosition(eye1.position + bigEllipseOneOffset);
+}
 
+void updateEyeTwoElements(Eye &eye2)
+{
+    const sf::Vector2f motionRadius = {45.f, 85.f};
     const sf::Vector2f bigEllipseTwoOffset = toEuclidean(motionRadius, eye2.rotation);
     eye2.littleEllipse.setPosition(eye2.position + bigEllipseTwoOffset);
 }
@@ -68,7 +86,8 @@ void initEyes(Eye &eye1, Eye &eye2)
         eye2.littleEllipse.setPoint(pointNo, point);
     }
 
-    updateEyesElements(eye1, eye2);
+    updateEyeOneElements(eye1);
+    updateEyeTwoElements(eye2);
 }
 
 void onMouseMove(const sf::Event::MouseMoveEvent &event, sf::Vector2f &mousePosition)
@@ -98,31 +117,34 @@ void pollEvents(sf::RenderWindow &window, sf::Vector2f &mousePosition)
 
 void update(const sf::Vector2f &mousePosition, Eye &eye1, Eye &eye2)
 {
+    const sf::Vector2f motionRadius = {45.f, 85.f};
+
     const sf::Vector2f EyeOneDelta = mousePosition - eye1.position;
     eye1.rotation = atan2(EyeOneDelta.y, EyeOneDelta.x);
 
     const sf::Vector2f EyeTwoDelta = mousePosition - eye2.position;
     eye2.rotation = atan2(EyeTwoDelta.y, EyeTwoDelta.x);
 
-    const sf::Vector2f bigEllipseRadius = {75.f, 150.f};
-    const sf::Vector2f littleEllipseRadius = {25.f, 60.f};
+    const bool isInsideOne = isInside(EyeOneDelta, motionRadius);
 
-    if (EyeOneDelta > bigEllipseRadius)
+    const bool isInsideTwo = isInside(EyeTwoDelta, motionRadius);
+
+    if (isInsideOne)
     {
-        updateEyesElements(eye1, eye2);
+        eye1.littleEllipse.setPosition(mousePosition);
     }
-    if (EyeOneDelta < bigEllipseRadius)
+    else
     {
-        eye1.littleEllipse = mousePosition;
+        updateEyeOneElements(eye1);
     }
 
-    if (EyeTwoDelta > bigEllipseRadius)
+    if (isInsideTwo)
     {
-        updateEyesElements(eye1, eye2);
+        eye2.littleEllipse.setPosition(mousePosition);
     }
-    if (EyeTwoDelta < bigEllipseRadius)
+    else
     {
-        eye2.littleEllipse = mousePosition;
+        updateEyeTwoElements(eye2);
     }
 }
 
@@ -140,7 +162,6 @@ int main()
 {
     constexpr unsigned WINDOW_WIDTH = 800;
     constexpr unsigned WINDOW_HEIGHT = 600;
-    sf::Clock clock;
 
     sf::ContextSettings settings;
     settings.antialiasingLevel = 8;
